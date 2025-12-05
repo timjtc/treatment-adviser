@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressStepper } from './ProgressStepper';
@@ -14,7 +15,8 @@ import { CurrentMedicationsStep } from './CurrentMedicationsStep';
 import { HealthMetricsStep } from './HealthMetricsStep';
 import { LifestyleFactorsStep } from './LifestyleFactorsStep';
 import { PrimaryComplaintStep } from './PrimaryComplaintStep';
-import { PatientIntakeData, MedicalCondition, Allergy, CurrentMedication } from '@/types/patient';
+import { MedicalCondition, Allergy, CurrentMedication } from '@/types/patient';
+import { PatientIntakeInput, patientIntakeSchema } from '@/lib/schemas';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -28,7 +30,7 @@ const STEPS = [
 ];
 
 interface PatientIntakeFormProps {
-  initialData?: Partial<PatientIntakeData>;
+  initialData?: Partial<PatientIntakeInput>;
 }
 
 export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
@@ -38,7 +40,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<Partial<PatientIntakeData>>({
+  const [formData, setFormData] = useState<Partial<PatientIntakeInput>>({
     medicalConditions: initialData?.medicalConditions || [],
     allergies: initialData?.allergies || [],
     pastSurgeries: initialData?.pastSurgeries || [],
@@ -79,33 +81,31 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
         // Current medications - optional
         return true;
 
-      case 3:
-        // Health metrics - age and weight required
-        if (!formData.healthMetrics?.age || formData.healthMetrics.age <= 0) {
-          setError('Please enter your age');
-          return false;
-        }
-        if (!formData.healthMetrics?.weight || formData.healthMetrics.weight <= 0) {
-          setError('Please enter your weight');
+      case 3: {
+        const result = patientIntakeSchema.pick({ healthMetrics: true }).safeParse({
+          healthMetrics: formData.healthMetrics,
+        });
+        if (!result.success) {
+          setError(result.error.errors[0]?.message || 'Please enter valid health metrics');
           return false;
         }
         return true;
+      }
 
       case 4:
         // Lifestyle factors - all have defaults
         return true;
 
-      case 5:
-        // Primary complaint - all fields required
-        if (!formData.primaryComplaint?.complaint?.trim()) {
-          setError('Please enter your primary complaint');
-          return false;
-        }
-        if (!formData.primaryComplaint?.duration?.trim()) {
-          setError('Please enter how long you have experienced this complaint');
+      case 5: {
+        const result = patientIntakeSchema.pick({ primaryComplaint: true }).safeParse({
+          primaryComplaint: formData.primaryComplaint,
+        });
+        if (!result.success) {
+          setError(result.error.errors[0]?.message || 'Please complete your primary complaint');
           return false;
         }
         return true;
+      }
 
       default:
         return true;
@@ -140,23 +140,37 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
 
       const submissionData: PatientIntakeData = {
         ...formData,
+      const submissionData: PatientIntakeInput = {
+        ...formData,
+        medicalConditions: formData.medicalConditions || [],
+        allergies: formData.allergies || [],
         pastSurgeries,
+        currentMedications: formData.currentMedications || [],
+        healthMetrics: formData.healthMetrics!,
+        lifestyleFactors: formData.lifestyleFactors!,
+        primaryComplaint: formData.primaryComplaint!,
         submittedAt: new Date(),
-      } as PatientIntakeData;
+      };
 
-      // Submit to API
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to analyze patient data');
+      const validated = patientIntakeSchema.safeParse(submissionData);
+      if (!validated.success) {
+        const message = validated.error.errors[0]?.message || 'Please fix validation errors';
+        setError(message);
+        setIsSubmitting(false);
+        return;
       }
+
+      const result = await response.json();
+
+      // Store result and navigate to dashboard
+      sessionStorage.setItem('treatmentAnalysis', JSON.stringify(result.data));
+      sessionStorage.setItem('patientData', JSON.stringify(validated.data));
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setIsSubmitting(false);
+    }
+  };
 
       const result = await response.json();
 
