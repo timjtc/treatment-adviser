@@ -118,8 +118,8 @@ Hackaton-BuildAndShip/
 Your `.env.local` already has OpenRouter, but we need to add FDA API:
 
 ```env
-# OpenRouter API Key
-OPENROUTER_API_KEY=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
+# OpenRouter API Key (Get from https://openrouter.ai/keys)
+OPENROUTER_API_KEY=your_api_key_here
 
 # Model selection (FREE models)
 OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
