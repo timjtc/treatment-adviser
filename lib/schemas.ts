@@ -68,7 +68,7 @@ export const patientIntakeSchema = z.object({
   lifestyleFactors: lifestyleFactorsSchema,
   primaryComplaint: primaryComplaintSchema,
   patientId: z.string().optional(),
-  submittedAt: z.date().optional(),
+  submittedAt: z.string().or(z.date()).optional(),
 });
 
 // Treatment Plan Schemas

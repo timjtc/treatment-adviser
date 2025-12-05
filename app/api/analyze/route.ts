@@ -19,14 +19,18 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
+    
+    console.log('Received patient data:', JSON.stringify(body, null, 2));
 
     // Validate patient intake data
     const validationResult = patientIntakeSchema.safeParse(body);
     if (!validationResult.success) {
+      console.error('Validation failed:', JSON.stringify(validationResult.error.issues, null, 2));
       return NextResponse.json(
         {
           error: 'Invalid patient data',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
+          receivedData: body,
         },
         { status: 400 }
       );
@@ -101,11 +105,11 @@ export async function POST(request: NextRequest) {
     const validatedResponse = treatmentAnalysisResponseSchema.safeParse(parsedResponse);
     
     if (!validatedResponse.success) {
-      console.error('LLM response failed schema validation:', validatedResponse.error);
+      console.error('LLM response failed schema validation:', JSON.stringify(validatedResponse.error.issues, null, 2));
       return NextResponse.json(
         {
           error: 'LLM response does not match expected schema',
-          details: validatedResponse.error.errors,
+          details: validatedResponse.error.issues,
           rawResponse: parsedResponse,
         },
         { status: 500 }

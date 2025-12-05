@@ -1,13 +1,410 @@
 /**
- * Dashboard Page (placeholder for now)
+ * Dashboard Page - Displays Treatment Analysis Results
  */
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Pill, 
+  Clock, 
+  FileText, 
+  Activity,
+  ArrowLeft,
+  Download
+} from 'lucide-react';
+import Link from 'next/link';
+
+interface Medication {
+  name: string;
+  genericName?: string;
+  brandName?: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  specialInstructions?: string;
+  purpose: string;
+}
+
+interface SafetyFlag {
+  severity: 'critical' | 'warning' | 'info';
+  type: 'drug-interaction' | 'allergy-conflict' | 'contraindication' | 'dosage-concern' | 'age-related' | 'other';
+  title: string;
+  description: string;
+  affectedMedications?: string[];
+  recommendation?: string;
+}
+
+interface AlternativeTreatment {
+  approach: string;
+  medications?: Medication[];
+  pros: string[];
+  cons: string[];
+  appropriateFor?: string;
+}
+
+interface TreatmentPlan {
+  medications: Medication[];
+  duration: string;
+  specialInstructions?: string;
+  followUpRecommendations: string[];
+  lifestyleModifications?: string[];
+}
+
+interface TreatmentAnalysis {
+  treatmentPlan: TreatmentPlan;
+  safetyFlags: SafetyFlag[];
+  riskScore: 'LOW' | 'MEDIUM' | 'HIGH';
+  rationale: string;
+  alternatives?: AlternativeTreatment[];
+  confidence?: number;
+  citations?: string[];
+  specialistConsultationRequired?: boolean;
+  monitoringRecommendations?: string[];
+}
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [analysis, setAnalysis] = useState<TreatmentAnalysis | null>(null);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const storedAnalysis = sessionStorage.getItem('treatmentAnalysis');
+    const storedMetadata = sessionStorage.getItem('metadata');
+    
+    if (!storedAnalysis) {
+      router.push('/intake');
+      return;
+    }
+
+    try {
+      setAnalysis(JSON.parse(storedAnalysis));
+      if (storedMetadata) {
+        setMetadata(JSON.parse(storedMetadata));
+      }
+    } catch (error) {
+      console.error('Failed to parse treatment analysis:', error);
+      router.push('/intake');
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case 'LOW': return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+      case 'MEDIUM': return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+      case 'HIGH': return <AlertTriangle className="h-5 w-5 text-red-600" />;
+      default: return null;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Loading treatment analysis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900">Treatment Analysis Dashboard</h1>
-        <p className="mt-2 text-gray-600">Dashboard coming soon...</p>
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/intake">
+            <Button variant="ghost" size="sm" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Intake
+            </Button>
+          </Link>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Treatment Analysis Results</h1>
+              <p className="mt-2 text-lg text-gray-600">
+                AI-powered clinical decision support
+              </p>
+              {metadata && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Generated by {metadata.model} • {new Date(metadata.timestamp).toLocaleString()}
+                </p>
+              )}
+            </div>
+            <Button variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export Report
+            </Button>
+          </div>
+        </div>
+
+        {/* Risk Score Overview */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Overall Risk Assessment</CardTitle>
+                <CardDescription>Based on drug interactions, contraindications, and patient factors</CardDescription>
+              </div>
+              <Badge className={`${getRiskColor(analysis.riskScore)} px-4 py-2 text-lg`}>
+                {analysis.riskScore} RISK
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Risk Score</span>
+                  <span className="text-2xl font-bold">{analysis.riskScore}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className={`h-3 rounded-full ${
+                      analysis.riskScore === 'LOW' ? 'bg-green-500' :
+                      analysis.riskScore === 'MEDIUM' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${
+                      analysis.riskScore === 'LOW' ? '33' :
+                      analysis.riskScore === 'MEDIUM' ? '66' : '100'
+                    }%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Safety Flags */}
+        {analysis.safetyFlags && analysis.safetyFlags.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                Safety Alerts ({analysis.safetyFlags.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {analysis.safetyFlags.map((flag, index) => (
+                <Alert key={index} className={`${getRiskColor(flag.severity)}`}>
+                  <div className="flex items-start gap-3">
+                    {getSeverityIcon(flag.severity)}
+                    <div className="flex-1">
+                      <AlertTitle className="font-semibold mb-2">
+                        {flag.severity.toUpperCase()} - {flag.title}
+                      </AlertTitle>
+                      <AlertDescription className="space-y-2">
+                        <p>{flag.description}</p>
+                        {flag.affectedMedications && flag.affectedMedications.length > 0 && (
+                          <p><strong>Affected Medications:</strong> {flag.affectedMedications.join(', ')}</p>
+                        )}
+                        {flag.recommendation && (
+                          <p><strong>Recommendation:</strong> {flag.recommendation}</p>
+                        )}
+                      </AlertDescription>
+                    </div>
+                  </div>
+                </Alert>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Treatment Plan */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Pill className="h-5 w-5 text-blue-600" />
+              Recommended Treatment Plan
+            </CardTitle>
+            <CardDescription>
+              Duration: {analysis.treatmentPlan.duration}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {analysis.treatmentPlan.medications.map((med, index) => (
+              <div key={index} className="border rounded-lg p-4 bg-white">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-lg">{med.name}</h3>
+                    {med.genericName && med.brandName && (
+                      <p className="text-sm text-gray-600">
+                        {med.genericName} ({med.brandName})
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="outline">{med.dosage}</Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <p className="text-sm text-gray-500">Frequency</p>
+                    <p className="font-medium">{med.frequency}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Duration</p>
+                    <p className="font-medium">{med.duration}</p>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-sm text-gray-500">Purpose</p>
+                  <p className="text-sm">{med.purpose}</p>
+                </div>
+
+                {med.specialInstructions && (
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                    <p className="text-sm font-medium text-blue-900 mb-1">Special Instructions</p>
+                    <p className="text-sm text-blue-800">{med.specialInstructions}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {analysis.treatmentPlan.specialInstructions && (
+              <Alert>
+                <FileText className="h-4 w-4" />
+                <AlertTitle>General Instructions</AlertTitle>
+                <AlertDescription>{analysis.treatmentPlan.specialInstructions}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Follow-up & Lifestyle */}
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Follow-up Recommendations */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-purple-600" />
+                Follow-up Care
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {analysis.treatmentPlan.followUpRecommendations.map((rec, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Lifestyle Modifications */}
+          {analysis.treatmentPlan.lifestyleModifications && analysis.treatmentPlan.lifestyleModifications.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-green-600" />
+                  Lifestyle Modifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {analysis.treatmentPlan.lifestyleModifications.map((mod, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{mod}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Clinical Reasoning */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Clinical Reasoning</CardTitle>
+            <CardDescription>AI analysis based on FDA drug data and patient information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm max-w-none">
+              <p className="whitespace-pre-wrap text-gray-700">{analysis.rationale}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Alternative Treatments */}
+        {analysis.alternatives && analysis.alternatives.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Alternative Treatment Options</CardTitle>
+              <CardDescription>Consider these alternatives if primary plan is not suitable</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {analysis.alternatives.map((alt: AlternativeTreatment, index: number) => (
+                <div key={index} className="border rounded-lg p-4 bg-white">
+                  <h3 className="font-semibold text-lg mb-2">{alt.approach}</h3>
+                  {alt.appropriateFor && (
+                    <p className="text-sm text-gray-600 mb-3">{alt.appropriateFor}</p>
+                  )}
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-green-700 mb-2">Pros</p>
+                      <ul className="space-y-1">
+                        {alt.pros.map((pro: string, i: number) => (
+                          <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            {pro}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-red-700 mb-2">Cons</p>
+                      <ul className="space-y-1">
+                        {alt.cons.map((con: string, i: number) => (
+                          <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            {con}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Disclaimer */}
+        <Alert className="mt-6 border-orange-200 bg-orange-50">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertTitle className="text-orange-900">Medical Disclaimer</AlertTitle>
+          <AlertDescription className="text-orange-800">
+            This analysis is for informational purposes only and should not replace professional medical advice.
+            Always consult with a licensed healthcare provider before starting any new treatment.
+          </AlertDescription>
+        </Alert>
       </div>
     </div>
   );

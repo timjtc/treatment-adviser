@@ -172,8 +172,9 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
       const result = await response.json();
 
       // Store result and navigate to dashboard
-      sessionStorage.setItem('treatmentAnalysis', JSON.stringify(result.data));
+      sessionStorage.setItem('treatmentAnalysis', JSON.stringify(result.treatmentPlan));
       sessionStorage.setItem('patientData', JSON.stringify(validated.data));
+      sessionStorage.setItem('metadata', JSON.stringify(result.metadata));
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
