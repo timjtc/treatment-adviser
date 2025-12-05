@@ -1,39 +1,65 @@
 /**
- * OpenRouter LLM client configuration
- * Using OpenAI SDK with OpenRouter's OpenAI-compatible API
+ * LLM Provider Configuration
+ * Supports multiple providers (OpenRouter, OpenAI, Anthropic) via environment variables
  */
 
 import OpenAI from 'openai';
 
-if (!process.env.OPENROUTER_API_KEY) {
-  throw new Error('OPENROUTER_API_KEY environment variable is not set');
+type Provider = 'openrouter' | 'openai' | 'anthropic';
+
+const PROVIDER: Provider = (process.env.PROVIDER || 'openrouter') as Provider;
+const API_KEY = process.env.PROVIDER_API_KEY || process.env[`${PROVIDER.toUpperCase()}_API_KEY`];
+const MODEL = process.env.PROVIDER_MODEL || 'gpt-4o';
+const TEMPERATURE = parseFloat(process.env.PROVIDER_TEMPERATURE || '0.3');
+
+if (!API_KEY) {
+  throw new Error(
+    `No API key found for provider "${PROVIDER}". ` +
+    `Set PROVIDER_API_KEY or ${PROVIDER.toUpperCase()}_API_KEY environment variable.`
+  );
 }
 
-// OpenRouter client configured with their base URL
-export const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    'X-Title': 'Treatment Plan Assistant',
-  },
-});
+/**
+ * Create provider-specific LLM client
+ */
+function createLLMClient(): OpenAI {
+  switch (PROVIDER) {
+    case 'openrouter':
+      return new OpenAI({
+        apiKey: API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          'X-Title': 'Treatment Plan Assistant',
+        },
+      });
 
-// Free models available on OpenRouter (no cost)
-export const FREE_MODELS = {
-  GEMINI_FLASH: 'google/gemini-2.0-flash-exp:free',
-  LLAMA_3_1: 'meta-llama/llama-3.1-8b-instruct:free',
-  QWEN_72B: 'qwen/qwen-2.5-72b-instruct:free',
-  MISTRAL_7B: 'mistralai/mistral-7b-instruct:free',
-} as const;
+    case 'openai':
+      return new OpenAI({
+        apiKey: API_KEY,
+      });
 
-// Default model - Gemini Flash is best free model for medical reasoning
-export const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || FREE_MODELS.GEMINI_FLASH;
-export const DEFAULT_TEMPERATURE = parseFloat(process.env.OPENROUTER_TEMPERATURE || '0.3');
+    case 'anthropic':
+      // Anthropic SDK uses different client; for now use OpenAI-compatible wrapper
+      // In production, you'd use @anthropic-ai/sdk
+      return new OpenAI({
+        apiKey: API_KEY,
+        baseURL: 'https://api.anthropic.com/v1',
+      });
+
+    default:
+      throw new Error(`Unknown provider: ${PROVIDER}`);
+  }
+}
+
+export const llmClient = createLLMClient();
+
+export const DEFAULT_MODEL = MODEL;
+export const DEFAULT_TEMPERATURE = TEMPERATURE;
+export const ACTIVE_PROVIDER = PROVIDER;
 
 /**
  * Configuration for structured JSON output
- * Note: Not all free models support response_format, so we'll rely on prompt engineering
  */
 export const JSON_RESPONSE_FORMAT = {
   type: 'json_object' as const,

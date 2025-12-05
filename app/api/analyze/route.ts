@@ -3,11 +3,11 @@
  * POST /api/analyze
  * 
  * Receives patient intake data, enriches with FDA/RxNorm APIs,
- * sends to OpenRouter LLM, returns validated treatment plan
+ * sends to LLM provider (OpenRouter/OpenAI/Anthropic), returns validated treatment plan
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { openrouter, DEFAULT_MODEL } from '@/lib/llm';
+import { llmClient, DEFAULT_MODEL, ACTIVE_PROVIDER } from '@/lib/llm';
 import { enrichPatientData, formatPatientDataForPrompt } from '@/lib/medical-data-service';
 import { patientIntakeSchema, treatmentAnalysisResponseSchema } from '@/lib/schemas';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
       `IMPORTANT: Always include lifestyleModifications array (even if empty) and followUpRecommendations array in your response.\n\n` +
       `RESPOND ONLY IN VALID JSON FORMAT matching the schema defined in the system prompt.`;
 
-    // Step 3: Call OpenRouter LLM with closed-loop context
-    console.log(`Calling OpenRouter LLM (model: ${DEFAULT_MODEL})...`);
+    // Step 3: Call LLM provider with closed-loop context
+    console.log(`Calling ${ACTIVE_PROVIDER} LLM (model: ${DEFAULT_MODEL})...`);
     
-    const completion = await openrouter.chat.completions.create({
+    const completion = await llmClient.chat.completions.create({
       model: DEFAULT_MODEL,
       messages: [
         {
@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       success: true,
       treatmentPlan: validatedResponse.data,
       metadata: {
+        provider: ACTIVE_PROVIDER,
         model: DEFAULT_MODEL,
         enrichedMedicationsCount: enrichedData.currentMedicationData.length,
         timestamp: new Date().toISOString(),
