@@ -6,7 +6,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressStepper } from './ProgressStepper';
@@ -138,8 +137,6 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
 
-      const submissionData: PatientIntakeData = {
-        ...formData,
       const submissionData: PatientIntakeInput = {
         ...formData,
         medicalConditions: formData.medicalConditions || [],
@@ -160,23 +157,23 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
         return;
       }
 
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validated.data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.error?.message || 'Failed to analyze patient data';
+        throw new Error(message);
+      }
+
       const result = await response.json();
 
       // Store result and navigate to dashboard
       sessionStorage.setItem('treatmentAnalysis', JSON.stringify(result.data));
       sessionStorage.setItem('patientData', JSON.stringify(validated.data));
-      router.push('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      setIsSubmitting(false);
-    }
-  };
-
-      const result = await response.json();
-
-      // Store result and navigate to dashboard
-      sessionStorage.setItem('treatmentAnalysis', JSON.stringify(result.data));
-      sessionStorage.setItem('patientData', JSON.stringify(submissionData));
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
