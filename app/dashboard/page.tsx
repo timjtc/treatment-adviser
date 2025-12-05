@@ -208,24 +208,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {analysis.safetyFlags.map((flag, index) => (
-                <Alert key={index} className={`${getRiskColor(flag.severity)}`}>
-                  <div className="flex items-start gap-3">
+                <Alert key={index} className={`${getRiskColor(flag.severity)} block`}>
+                  <AlertTitle className="font-semibold mb-2 flex items-center gap-2">
                     {getSeverityIcon(flag.severity)}
-                    <div className="flex-1">
-                      <AlertTitle className="font-semibold mb-2">
-                        {flag.severity.toUpperCase()} - {flag.title}
-                      </AlertTitle>
-                      <AlertDescription className="space-y-2">
-                        <p>{flag.description}</p>
-                        {flag.affectedMedications && flag.affectedMedications.length > 0 && (
-                          <p><strong>Affected Medications:</strong> {flag.affectedMedications.join(', ')}</p>
-                        )}
-                        {flag.recommendation && (
-                          <p><strong>Recommendation:</strong> {flag.recommendation}</p>
-                        )}
-                      </AlertDescription>
-                    </div>
-                  </div>
+                    <span>{flag.severity.toUpperCase()} - {flag.title}</span>
+                  </AlertTitle>
+                  <AlertDescription className="space-y-2 block">
+                    <p className="whitespace-normal">{flag.description}</p>
+                    {flag.affectedMedications && flag.affectedMedications.length > 0 && (
+                      <p className="whitespace-normal"><strong>Affected Medications:</strong> {flag.affectedMedications.join(', ')}</p>
+                    )}
+                    {flag.recommendation && (
+                      <p className="whitespace-normal"><strong>Recommendation:</strong> {flag.recommendation}</p>
+                    )}
+                  </AlertDescription>
                 </Alert>
               ))}
             </CardContent>
@@ -294,7 +290,11 @@ export default function DashboardPage() {
         </Card>
 
         {/* Follow-up & Lifestyle */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className={`grid gap-6 mb-6 ${
+          analysis.treatmentPlan.lifestyleModifications && analysis.treatmentPlan.lifestyleModifications.length > 0 
+            ? 'md:grid-cols-2' 
+            : 'md:grid-cols-1'
+        }`}>
           {/* Follow-up Recommendations */}
           <Card>
             <CardHeader>

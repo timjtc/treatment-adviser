@@ -120,3 +120,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix for dashboard alert content width */
+@layer components {
+  .alert-description {
+    max-width: 100%;
+    width: 100%;
+  }
+}

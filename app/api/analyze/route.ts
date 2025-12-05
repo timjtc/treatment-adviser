@@ -54,9 +54,11 @@ export async function POST(request: NextRequest) {
       `1. Check for drug interactions between current medications and any new recommendations\n` +
       `2. Check for contraindications based on patient's conditions and allergies\n` +
       `3. Verify dosages are appropriate for patient's age, weight, and health status\n` +
-      `4. Flag any safety concerns (HIGH, MEDIUM, or LOW severity)\n` +
+      `4. Flag any safety concerns (critical, warning, or info severity)\n` +
       `5. Provide alternative treatments if primary recommendation has safety issues\n` +
-      `6. Calculate overall risk score (0-10 scale)\n\n` +
+      `6. Include lifestyle modifications based on patient's current lifestyle factors\n` +
+      `7. Include follow-up recommendations for monitoring\n\n` +
+      `IMPORTANT: Always include lifestyleModifications array (even if empty) and followUpRecommendations array in your response.\n\n` +
       `RESPOND ONLY IN VALID JSON FORMAT matching the schema defined in the system prompt.`;
 
     // Step 3: Call OpenRouter LLM with closed-loop context
