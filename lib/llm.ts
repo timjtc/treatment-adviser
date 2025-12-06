@@ -20,6 +20,24 @@ if (!API_KEY && PROVIDER !== 'ollama') {
   );
 }
 
+// Validate API key format matches provider
+if (API_KEY) {
+  const keyPrefix = API_KEY.substring(0, 10);
+  if (PROVIDER === 'openrouter' && !API_KEY.startsWith('sk-or-v1-')) {
+    console.warn(
+      `⚠️  WARNING: API key format (${keyPrefix}...) does not match provider "${PROVIDER}". ` +
+      `OpenRouter keys should start with "sk-or-v1-". ` +
+      `If using OpenAI key, set PROVIDER=openai instead.`
+    );
+  } else if (PROVIDER === 'openai' && !API_KEY.startsWith('sk-proj-')) {
+    console.warn(
+      `⚠️  WARNING: API key format (${keyPrefix}...) may not match provider "${PROVIDER}". ` +
+      `OpenAI keys typically start with "sk-proj-". ` +
+      `If using OpenRouter key, set PROVIDER=openrouter instead.`
+    );
+  }
+}
+
 /**
  * Create provider-specific LLM client
  */

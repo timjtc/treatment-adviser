@@ -13,7 +13,7 @@ import { patientIntakeSchema, treatmentAnalysisResponseSchema } from '@/lib/sche
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60; // Max 60 seconds for API route
+export const maxDuration = 540; // Max 9 minutes for API route (LLM inference can be slow, especially local)
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,12 +135,31 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in /api/analyze:', error);
 
+    // Detect error types
+    const isTimeout =
+      (error instanceof Error && error.message.toLowerCase().includes('timeout')) ||
+      (error instanceof Error && error.message.toLowerCase().includes('signal'));
+
+    const isAuthError = (error as any)?.status === 401 || (error as any)?.code === 401;
+
+    let errorMessage = isTimeout
+      ? `LLM inference timeout. Local models like Ollama can be slow. Try: (1) Using a faster model/provider, (2) Increasing system resources, (3) Retrying with smaller input.`
+      : isAuthError
+      ? `Authentication failed (401). Check: (1) Is your API key correct? (2) Does PROVIDER match your key type? (e.g., PROVIDER=openai for sk-proj-* keys). (3) Is the key still valid?`
+      : error instanceof Error
+      ? error.message
+      : 'Unknown error';
+
     return NextResponse.json(
       {
-        error: 'Failed to generate treatment plan',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: isAuthError ? 'Authentication failed' : isTimeout ? 'Request timeout - LLM inference too slow' : 'Failed to generate treatment plan',
+        message: errorMessage,
+        provider: ACTIVE_PROVIDER,
+        model: DEFAULT_MODEL,
+        authError: isAuthError,
+        timeout: isTimeout,
       },
-      { status: 500 }
+      { status: isAuthError ? 401 : isTimeout ? 504 : 500 }
     );
   }
 }

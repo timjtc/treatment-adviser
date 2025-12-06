@@ -85,7 +85,8 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           healthMetrics: formData.healthMetrics,
         });
         if (!result.success) {
-          setError(result.error.errors[0]?.message || 'Please enter valid health metrics');
+          const firstIssue = result.error.issues?.[0]?.message || result.error.errors?.[0]?.message;
+          setError(firstIssue || 'Please enter valid health metrics');
           return false;
         }
         return true;
@@ -100,7 +101,8 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           primaryComplaint: formData.primaryComplaint,
         });
         if (!result.success) {
-          setError(result.error.errors[0]?.message || 'Please complete your primary complaint');
+          const firstIssue = result.error.issues?.[0]?.message || result.error.errors?.[0]?.message;
+          setError(firstIssue || 'Please complete your primary complaint');
           return false;
         }
         return true;
