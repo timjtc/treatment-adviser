@@ -42,6 +42,20 @@ CREATE TABLE IF NOT EXISTS conditions (
 
 CREATE INDEX IF NOT EXISTS idx_visits_patient_date ON visits(patient_id, visit_date DESC);
 
+-- Stores LLM analysis outputs for re-viewing treatment plans
+CREATE TABLE IF NOT EXISTS analysis_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_name TEXT,
+  primary_complaint TEXT,
+  risk_score TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  treatment_plan JSONB NOT NULL,
+  patient_data JSONB,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_analysis_runs_created_at ON analysis_runs(created_at DESC);
+
 -- Sample inserts: two patients, one with a return visit
 WITH p AS (
   INSERT INTO patients (first_name, last_name, date_of_birth, sex, email, phone)

@@ -25,45 +25,37 @@ const safetyQueue = [
 
 async function getRecentVisits() {
   try {
-    if (!process.env.DATABASE_URL) return null;
-
     const rows = await query<{
-      patient_name: string;
-      primary_complaint: string;
+      patient_name: string | null;
+      primary_complaint: string | null;
       risk_score: string | null;
-      visit_date: string;
+      created_at: string;
     }>(
-      `SELECT CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
-              v.primary_complaint,
-              COALESCE(v.risk_score, 'LOW') AS risk_score,
-              v.visit_date
-         FROM visits v
-         JOIN patients p ON p.id = v.patient_id
-        ORDER BY v.visit_date DESC
+      `SELECT ar.patient_name,
+              ar.primary_complaint,
+              COALESCE(ar.risk_score, 'LOW') AS risk_score,
+              ar.created_at
+         FROM analysis_runs ar
+        ORDER BY ar.created_at DESC
         LIMIT 5`
     );
 
     const mapped = rows.map((r) => ({
-      name: r.patient_name,
-      complaint: r.primary_complaint,
+      name: r.patient_name || 'Unknown patient',
+      complaint: r.primary_complaint || 'Primary complaint not provided',
       risk: (r.risk_score || 'LOW').toUpperCase(),
-      ts: new Date(r.visit_date).toLocaleString(),
+      ts: new Date(r.created_at).toLocaleString(),
     }));
 
-    return mapped.length > 0 ? mapped : null;
+    return mapped;
   } catch (err) {
     console.error('Failed to load recent visits', err);
-    return null;
+    return [];
   }
 }
 
 export default async function Home() {
-  const recentPatients =
-    (await getRecentVisits()) || [
-      { name: 'Demo — High Risk', complaint: 'Erectile Dysfunction', risk: 'HIGH', ts: 'Today 09:20' },
-      { name: 'Demo — Medium Risk', complaint: 'Erectile Dysfunction', risk: 'MEDIUM', ts: 'Today 09:05' },
-      { name: 'Demo — Low Risk', complaint: 'Hair Loss', risk: 'LOW', ts: 'Today 08:40' },
-    ];
+  const recentPatients = await getRecentVisits();
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -115,23 +107,6 @@ export default async function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href="/intake?demo=high-risk">
-                      <Button variant="outline" className="gap-2">
-                        <AlertTriangle className="h-4 w-4 text-red-600" /> High-risk demo
-                      </Button>
-                    </Link>
-                    <Link href="/intake?demo=medium-risk">
-                      <Button variant="outline" className="gap-2">
-                        <Activity className="h-4 w-4 text-amber-600" /> Medium demo
-                      </Button>
-                    </Link>
-                    <Link href="/intake?demo=low-risk">
-                      <Button variant="outline" className="gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Low demo
-                      </Button>
-                    </Link>
-                  </div>
                 </div>
 
                 <Separator />
@@ -173,21 +148,27 @@ export default async function Home() {
                   <CardTitle className="text-lg">Recent analyses</CardTitle>
                   <CardDescription>Jump back into the last patients you reviewed.</CardDescription>
                 </div>
-                <Link href="/patients" className="text-sm text-primary hover:underline">View all</Link>
+                <Link href="/analyses" className="text-sm text-primary hover:underline">View all</Link>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentPatients.map((p) => (
-                  <div key={p.name} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2">
-                    <div>
-                      <div className="font-semibold text-slate-900">{p.name}</div>
-                      <div className="text-sm text-slate-600">{p.complaint}</div>
-                      <div className="text-xs text-slate-500">{p.ts}</div>
-                    </div>
-                    <Badge className={p.risk === 'HIGH' ? 'bg-red-600' : p.risk === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-600'}>
-                      {p.risk}
-                    </Badge>
+                {recentPatients.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-6 text-sm text-slate-600">
+                    No analyses yet. Run an intake to generate a plan.
                   </div>
-                ))}
+                ) : (
+                  recentPatients.map((p) => (
+                    <div key={`${p.name}-${p.ts}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2">
+                      <div>
+                        <div className="font-semibold text-slate-900">{p.name}</div>
+                        <div className="text-sm text-slate-600">{p.complaint}</div>
+                        <div className="text-xs text-slate-500">{p.ts}</div>
+                      </div>
+                      <Badge className={p.risk === 'HIGH' ? 'bg-red-600' : p.risk === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-600'}>
+                        {p.risk}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 

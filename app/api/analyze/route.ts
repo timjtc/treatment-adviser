@@ -11,6 +11,7 @@ import { llmClient, DEFAULT_MODEL, ACTIVE_PROVIDER } from '@/lib/llm';
 import { enrichPatientData, formatPatientDataForPrompt } from '@/lib/medical-data-service';
 import { patientIntakeSchema, treatmentAnalysisResponseSchema } from '@/lib/schemas';
 import { PatientIntakeData } from '@/types/patient';
+import { query } from '@/lib/db';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
@@ -126,6 +127,26 @@ export async function POST(request: NextRequest) {
 
     // Step 5: Return validated treatment plan
     console.log('Treatment plan generated successfully');
+
+    // Persist analysis so it can be viewed later
+    try {
+      await query(
+        `INSERT INTO analysis_runs (patient_name, primary_complaint, risk_score, status, treatment_plan, patient_data, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          patientData.patientId || 'Unknown patient',
+          patientData.primaryComplaint?.complaint || 'Primary complaint not provided',
+          validatedResponse.data.riskScore,
+          'pending',
+          JSON.stringify(validatedResponse.data),
+          JSON.stringify(patientData),
+          JSON.stringify({ provider: ACTIVE_PROVIDER, model: DEFAULT_MODEL, timestamp: new Date().toISOString() }),
+        ]
+      );
+    } catch (dbErr) {
+      console.error('Failed to persist analysis_run', dbErr);
+      // Do not fail the request if persistence fails
+    }
     
     return NextResponse.json({
       success: true,
