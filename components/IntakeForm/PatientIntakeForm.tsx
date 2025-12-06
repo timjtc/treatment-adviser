@@ -21,11 +21,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 const STEPS = [
-  { id: 1, name: 'Medical History', description: 'Conditions & allergies' },
-  { id: 2, name: 'Medications', description: 'Current prescriptions' },
-  { id: 3, name: 'Health Metrics', description: 'Age, weight, vitals' },
-  { id: 4, name: 'Lifestyle', description: 'Habits & activities' },
-  { id: 5, name: 'Complaint', description: 'Primary concern' },
+  { id: 1, name: 'Patient Info', description: 'Name & demographics' },
+  { id: 2, name: 'Medical History', description: 'Conditions & allergies' },
+  { id: 3, name: 'Medications', description: 'Current prescriptions' },
+  { id: 4, name: 'Health Metrics', description: 'Age, weight, vitals' },
+  { id: 5, name: 'Lifestyle', description: 'Habits & activities' },
+  { id: 6, name: 'Complaint', description: 'Primary concern' },
 ];
 
 interface PatientIntakeFormProps {
@@ -39,6 +40,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
+  const [patientName, setPatientName] = useState(initialData?.patientName || '');
   const [formData, setFormData] = useState<Partial<PatientIntakeInput>>({
     medicalConditions: initialData?.medicalConditions || [],
     allergies: initialData?.allergies || [],
@@ -67,20 +69,27 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
   const [pastSurgeriesText, setPastSurgeriesText] = useState(
     initialData?.pastSurgeries?.join('\n') || ''
   );
-
   const validateCurrentStep = (): boolean => {
     setError(null);
 
     switch (currentStep) {
       case 1:
-        // Medical history - optional but no validation needed
+        // Patient name
+        if (!patientName.trim()) {
+          setError('Please enter patient name');
+          return false;
+        }
         return true;
 
       case 2:
+        // Medical history - optional but no validation needed
+        return true;
+
+      case 3:
         // Current medications - optional
         return true;
 
-      case 3: {
+      case 4: {
         const result = patientIntakeSchema.pick({ healthMetrics: true }).safeParse({
           healthMetrics: formData.healthMetrics,
         });
@@ -92,11 +101,11 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
         return true;
       }
 
-      case 4:
+      case 5:
         // Lifestyle factors - all have defaults
         return true;
 
-      case 5: {
+      case 6: {
         const result = patientIntakeSchema.pick({ primaryComplaint: true }).safeParse({
           primaryComplaint: formData.primaryComplaint,
         });
@@ -141,6 +150,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
 
       const submissionData: PatientIntakeInput = {
         ...formData,
+        patientName: patientName.trim(),
         medicalConditions: formData.medicalConditions || [],
         allergies: formData.allergies || [],
         pastSurgeries,
@@ -183,10 +193,25 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
       setIsSubmitting(false);
     }
   };
-
   const renderStep = () => {
     switch (currentStep) {
       case 1:
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Patient Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={patientName}
+              onChange={(e) => setPatientName(e.target.value)}
+              placeholder="Enter full name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        );
+
+      case 2:
         return (
           <MedicalHistoryStep
             medicalConditions={formData.medicalConditions || []}
@@ -202,7 +227,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           />
         );
 
-      case 2:
+      case 3:
         return (
           <CurrentMedicationsStep
             medications={formData.currentMedications || []}
@@ -212,7 +237,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           />
         );
 
-      case 3:
+      case 4:
         return (
           <HealthMetricsStep
             healthMetrics={formData.healthMetrics!}
@@ -220,7 +245,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           />
         );
 
-      case 4:
+      case 5:
         return (
           <LifestyleFactorsStep
             lifestyleFactors={formData.lifestyleFactors!}
@@ -228,7 +253,7 @@ export function PatientIntakeForm({ initialData }: PatientIntakeFormProps) {
           />
         );
 
-      case 5:
+      case 6:
         return (
           <PrimaryComplaintStep
             primaryComplaint={formData.primaryComplaint!}

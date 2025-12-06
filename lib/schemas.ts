@@ -59,6 +59,7 @@ export const primaryComplaintSchema = z.object({
 });
 
 export const patientIntakeSchema = z.object({
+  patientName: z.string().min(1, 'Patient name is required'),
   medicalConditions: z.array(medicalConditionSchema),
   allergies: z.array(allergySchema),
   pastSurgeries: z.array(z.string()).optional(),
