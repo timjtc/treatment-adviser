@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { query } from '@/lib/db';
 import {
   Stethoscope,
   ClipboardList,
@@ -16,19 +17,54 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-const recentPatients = [
-  { name: 'Demo — High Risk', complaint: 'Erectile Dysfunction', risk: 'HIGH', ts: 'Today 09:20', flags: 4 },
-  { name: 'Demo — Medium Risk', complaint: 'Erectile Dysfunction', risk: 'MEDIUM', ts: 'Today 09:05', flags: 2 },
-  { name: 'Demo — Low Risk', complaint: 'Hair Loss', risk: 'LOW', ts: 'Today 08:40', flags: 0 },
-];
-
 const safetyQueue = [
   { title: 'Warfarin + Sildenafil', severity: 'critical', note: 'Bleeding risk; consult cardiology.' },
   { title: 'Penicillin allergy', severity: 'warning', note: 'Avoid beta-lactams; consider alternatives.' },
   { title: 'CKD Stage 3 dosing', severity: 'warning', note: 'Renally adjust medications.' },
 ];
 
-export default function Home() {
+async function getRecentVisits() {
+  try {
+    if (!process.env.DATABASE_URL) return null;
+
+    const rows = await query<{
+      patient_name: string;
+      primary_complaint: string;
+      risk_score: string | null;
+      visit_date: string;
+    }>(
+      `SELECT CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+              v.primary_complaint,
+              COALESCE(v.risk_score, 'LOW') AS risk_score,
+              v.visit_date
+         FROM visits v
+         JOIN patients p ON p.id = v.patient_id
+        ORDER BY v.visit_date DESC
+        LIMIT 5`
+    );
+
+    const mapped = rows.map((r) => ({
+      name: r.patient_name,
+      complaint: r.primary_complaint,
+      risk: (r.risk_score || 'LOW').toUpperCase(),
+      ts: new Date(r.visit_date).toLocaleString(),
+    }));
+
+    return mapped.length > 0 ? mapped : null;
+  } catch (err) {
+    console.error('Failed to load recent visits', err);
+    return null;
+  }
+}
+
+export default async function Home() {
+  const recentPatients =
+    (await getRecentVisits()) || [
+      { name: 'Demo — High Risk', complaint: 'Erectile Dysfunction', risk: 'HIGH', ts: 'Today 09:20' },
+      { name: 'Demo — Medium Risk', complaint: 'Erectile Dysfunction', risk: 'MEDIUM', ts: 'Today 09:05' },
+      { name: 'Demo — Low Risk', complaint: 'Hair Loss', risk: 'LOW', ts: 'Today 08:40' },
+    ];
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-10 space-y-8">
@@ -132,9 +168,12 @@ export default function Home() {
           {/* Right column: Recent and vitals */}
           <div className="space-y-6">
             <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Recent analyses</CardTitle>
-                <CardDescription>Jump back into the last patients you reviewed.</CardDescription>
+              <CardHeader className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-lg">Recent analyses</CardTitle>
+                  <CardDescription>Jump back into the last patients you reviewed.</CardDescription>
+                </div>
+                <Link href="/patients" className="text-sm text-primary hover:underline">View all</Link>
               </CardHeader>
               <CardContent className="space-y-3">
                 {recentPatients.map((p) => (

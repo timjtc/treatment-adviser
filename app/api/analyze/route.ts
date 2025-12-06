@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { llmClient, DEFAULT_MODEL, ACTIVE_PROVIDER } from '@/lib/llm';
 import { enrichPatientData, formatPatientDataForPrompt } from '@/lib/medical-data-service';
 import { patientIntakeSchema, treatmentAnalysisResponseSchema } from '@/lib/schemas';
+import { PatientIntakeData } from '@/types/patient';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
@@ -36,7 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const patientData = validationResult.data;
+    const patientData: PatientIntakeData = {
+      ...validationResult.data,
+      submittedAt: validationResult.data.submittedAt
+        ? new Date(validationResult.data.submittedAt)
+        : undefined,
+    };
 
     // Step 1: Enrich patient data with FDA/RxNorm APIs
     console.log('Enriching patient data with FDA and RxNorm APIs...');
