@@ -56,6 +56,9 @@ export interface PrimaryComplaint {
 }
 
 export interface PatientIntakeData {
+  // Patient Info
+  patientName: string;
+  
   // Medical History
   medicalConditions: MedicalCondition[];
   allergies: Allergy[];

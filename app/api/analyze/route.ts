@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         `INSERT INTO analysis_runs (patient_name, primary_complaint, risk_score, status, treatment_plan, patient_data, metadata)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
-          patientData.patientId || 'Unknown patient',
+          patientData.patientName || 'Unknown patient',
           patientData.primaryComplaint?.complaint || 'Primary complaint not provided',
           validatedResponse.data.riskScore,
           'pending',
