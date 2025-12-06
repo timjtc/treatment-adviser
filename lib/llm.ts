@@ -5,14 +5,15 @@
 
 import OpenAI from 'openai';
 
-type Provider = 'openrouter' | 'openai' | 'anthropic';
+type Provider = 'openrouter' | 'openai' | 'anthropic' | 'ollama';
 
 const PROVIDER: Provider = (process.env.PROVIDER || 'openrouter') as Provider;
 const API_KEY = process.env.PROVIDER_API_KEY || process.env[`${PROVIDER.toUpperCase()}_API_KEY`];
 const MODEL = process.env.PROVIDER_MODEL || 'gpt-4o';
 const TEMPERATURE = parseFloat(process.env.PROVIDER_TEMPERATURE || '0.3');
 
-if (!API_KEY) {
+// For Ollama, API key is not required
+if (!API_KEY && PROVIDER !== 'ollama') {
   throw new Error(
     `No API key found for provider "${PROVIDER}". ` +
     `Set PROVIDER_API_KEY or ${PROVIDER.toUpperCase()}_API_KEY environment variable.`
@@ -45,6 +46,13 @@ function createLLMClient(): OpenAI {
       return new OpenAI({
         apiKey: API_KEY,
         baseURL: 'https://api.anthropic.com/v1',
+      });
+
+    case 'ollama':
+      // Ollama runs locally with OpenAI-compatible API
+      return new OpenAI({
+        apiKey: 'ollama', // Ollama doesn't need a real API key
+        baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
       });
 
     default:
